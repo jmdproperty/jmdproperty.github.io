@@ -4957,17 +4957,7 @@ leadForm.addEventListener("submit", async e => {
 
     const editingId = leadForm.dataset.editingId;
 
-    if (!currentCompany) {
-        await loadCompany();
-    }
-
-    if (!currentCompany) {
-        alert("❌ Company information could not be loaded. Please refresh and try again.");
-        return;
-    }
-
     const leadData = {
-        company_id: currentCompany.id,
         name: data.name || null,
         phone: data.phone || null,
         email: data.email || null,
@@ -7348,69 +7338,6 @@ window.loginUser = async function () {
 };
 
 
-// =========================================
-// SERVER-SIDE LICENSE CONTROL
-// =========================================
-let c1pxLicenseTimer = null;
-
-function showLicenseScreen(message) {
-    const loginScreen = document.getElementById("loginScreen");
-    const licenseScreen = document.getElementById("licenseScreen");
-    const licenseMessage = document.getElementById("licenseMessage");
-
-    if (licenseMessage) {
-        licenseMessage.textContent = message || "CRM access is currently unavailable.";
-    }
-    if (loginScreen) loginScreen.style.display = "none";
-    if (licenseScreen) licenseScreen.style.display = "flex";
-}
-
-window.returnToLogin = function () {
-    const licenseScreen = document.getElementById("licenseScreen");
-    const loginScreen = document.getElementById("loginScreen");
-    if (licenseScreen) licenseScreen.style.display = "none";
-    if (loginScreen) loginScreen.style.display = "flex";
-};
-
-async function checkC1PXLicense(showBlockedScreen = true) {
-    const { data, error } = await db.rpc("c1px_check_license");
-
-    if (error) {
-        console.error("C1PX License Check Error:", error);
-        if (showBlockedScreen) {
-            showLicenseScreen("License service could not be verified. Please try again or contact the administrator.");
-        }
-        return { allowed: false, status: "error", message: "License service could not be verified." };
-    }
-
-    const license = Array.isArray(data) ? data[0] : data;
-    window.c1pxLicense = license || null;
-
-    if (!license?.allowed) {
-        const message = license?.message || "CRM license is not active.";
-        if (showBlockedScreen) showLicenseScreen(message);
-        return license || { allowed: false, status: "expired", message };
-    }
-
-    return license;
-}
-
-function startC1PXLicenseWatch() {
-    if (c1pxLicenseTimer) clearInterval(c1pxLicenseTimer);
-    // Re-check every 5 minutes while the CRM is open.
-    c1pxLicenseTimer = setInterval(async () => {
-        if (!window.currentEmployee) return;
-        const license = await checkC1PXLicense(false);
-        if (!license?.allowed) {
-            if (c1pxLicenseTimer) clearInterval(c1pxLicenseTimer);
-            await db.auth.signOut();
-            localStorage.removeItem("loggedInUser");
-            sessionStorage.removeItem("c1pxSession");
-            showLicenseScreen(license?.message || "CRM license is no longer active.");
-        }
-    }, 5 * 60 * 1000);
-}
-
 // LOAD EMPLOYEE AFTER LOGIN
 async function initializeLoggedInUser(user) {
 
@@ -7462,17 +7389,6 @@ async function initializeLoggedInUser(user) {
     throw new Error("Your employee login is disabled.");
 }
 
-    // Server-side license gate: no CRM session is allowed without an active license.
-    const license = await checkC1PXLicense(true);
-    if (!license?.allowed) {
-        await db.auth.signOut();
-        localStorage.removeItem("loggedInUser");
-        sessionStorage.removeItem("c1pxSession");
-        const blocked = new Error(license?.message || "CRM license is not active.");
-        blocked.code = "C1PX_LICENSE_BLOCKED";
-        throw blocked;
-    }
-
     console.log("C1PX Employee:", employee);
     console.log("C1PX Role:", employee.roles);
     console.log("C1PX Company:", employee.companies);
@@ -7518,7 +7434,6 @@ applyRolePermissions();
 
     // Open dashboard after leads are loaded
     await loadPage("dashboard");
-    startC1PXLicenseWatch();
 }
 
 // FORGOT PASSWORD
@@ -9366,10 +9281,6 @@ async function restoreC1PXSession() {
     } catch (error) {
 
         console.error("C1PX Session Initialization Error:", error);
-
-        if (error?.code === "C1PX_LICENSE_BLOCKED") {
-            return;
-        }
 
         const loginScreen = document.getElementById("loginScreen");
         if (loginScreen) loginScreen.style.display = "flex";
