@@ -1204,15 +1204,25 @@ function escLead(value){
   }[c]));
 }
 
+function normalizePhone10(phone){
+  const digits = String(phone ?? "").replace(/\D/g, "");
+  return digits.length >= 10 ? digits.slice(-10) : digits;
+}
+
 function leadPhoneHref(phone){
-  return String(phone ?? "").replace(/[^\d+]/g,"");
+  return normalizePhone10(phone);
+}
+
+function leadWhatsAppHref(phone){
+  const digits = normalizePhone10(phone);
+  return digits ? `https://wa.me/91${digits}` : "";
 }
 
 function openLeadDetails(id){
   const lead = leadById(id);
   if(!lead) return;
 
-  const phone = leadPhoneHref(lead.phone || lead.whatsapp);
+  const phone = normalizePhone10(lead.phone || lead.whatsapp);
   const email = String(lead.email || "").trim();
   const notes = lead.notes || lead.note || "";
   const followup = lead.followupDate
@@ -1235,7 +1245,7 @@ function openLeadDetails(id){
           <div>
             <div class="eyebrow">LEAD PROFILE</div>
             <h2>${escLead(lead.name || "Unnamed Lead")}</h2>
-            <div class="muted">${escLead(lead.phone || "No mobile number")} ${email ? "• " + escLead(email) : ""}</div>
+            <div class="muted">${escLead(phone || "No mobile number")} ${email ? "• " + escLead(email) : ""}</div>
           </div>
         </div>
         <button class="modal-close" onclick="closeLeadDetails()" aria-label="Close">×</button>
@@ -1243,7 +1253,7 @@ function openLeadDetails(id){
 
       <div class="lead-quick-actions">
         ${phone ? `<a class="primary-btn" href="tel:${escLead(phone)}">☎ Call</a>` : ""}
-        ${phone ? `<a class="secondary-btn" target="_blank" rel="noopener" href="https://wa.me/${escLead(phone.replace(/^\\+/,""))}">◉ WhatsApp</a>` : ""}
+        ${phone ? `<a class="secondary-btn" target="_blank" rel="noopener" href="${escLead(leadWhatsAppHref(phone))}">◉ WhatsApp</a>` : ""}
         ${email ? `<a class="secondary-btn" href="mailto:${escLead(email)}">✉ Email</a>` : ""}
         <button class="secondary-btn" onclick="editLead(${Number(lead.id)})">✎ Edit Lead</button>
         <button class="secondary-btn" onclick="closeLeadDetails();scheduleVisit(${Number(lead.id)})">＋ Follow-up</button>
@@ -1254,7 +1264,7 @@ function openLeadDetails(id){
           <div class="detail-card-title">Customer Information</div>
           <div class="detail-fields">
             <div><span>Name</span><strong>${escLead(lead.name || "—")}</strong></div>
-            <div><span>Mobile</span><strong>${escLead(lead.phone || "—")}</strong></div>
+            <div><span>Mobile</span><strong>${escLead(phone || "—")}</strong></div>
             <div><span>Email</span><strong>${escLead(lead.email || "—")}</strong></div>
             <div><span>Location</span><strong>${escLead(lead.location || "—")}</strong></div>
             <div><span>Job Title</span><strong>${escLead(lead.job_title || "—")}</strong></div>
@@ -5146,9 +5156,9 @@ function viewLead(id){
  const l=leads.find(x=>x.id===id); if(!l)return;
  document.getElementById("detailsName").textContent=l.name;
  document.getElementById("leadDetailsBody").innerHTML=`
- <div class="details-top"><span class="status ${statusClass(l.status)}">${l.status}</span><div class="detail-actions"><a href="tel:${String(l.phone || "").replaceAll(" ","")}" class="call-btn">📞 Call</a><a href="https://wa.me/${String(l.whatsapp || "").replaceAll(/\D/g,"")} target="_blank" class="whatsapp-btn">💬 WhatsApp</a></div></div>
+ <div class="details-top"><span class="status ${statusClass(l.status)}">${l.status}</span><div class="detail-actions"><a href="tel:${normalizePhone10(l.phone || l.whatsapp)}" class="call-btn">📞 Call</a><a href="https://wa.me/91${normalizePhone10(l.whatsapp || l.phone)}" target="_blank" rel="noopener" class="whatsapp-btn">💬 WhatsApp</a></div></div>
  <div class="details-grid">
-<div><span>Mobile</span><strong>${String(l.phone || "").replace(/\D/g, "").slice(-10)}</strong></div>
+<div><span>Mobile</span><strong>${normalizePhone10(l.phone || l.whatsapp) || "—"}</strong></div>
 <div><span>Job Title</span><strong>${String(l.job_title || "-")}</strong></div>
 <div><span>Date of Birth</span><strong>${String(l.dob || "-")}</strong></div>
 <div><span>Location</span><strong>${String(l.location || "-")}</strong></div>
