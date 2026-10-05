@@ -5148,7 +5148,7 @@ function viewLead(id){
  document.getElementById("leadDetailsBody").innerHTML=`
  <div class="details-top"><span class="status ${statusClass(l.status)}">${l.status}</span><div class="detail-actions"><a href="tel:${String(l.phone || "").replaceAll(" ","")}" class="call-btn">📞 Call</a><a href="https://wa.me/${String(l.whatsapp || "").replaceAll(/\D/g,"")} target="_blank" class="whatsapp-btn">💬 WhatsApp</a></div></div>
  <div class="details-grid">
-<div><span>Mobile</span><strong>${String(l.phone || "")}</strong></div>
+<div><span>Mobile</span><strong>${String(l.phone || "").replace(/\D/g, "").slice(-10)}</strong></div>
 <div><span>Job Title</span><strong>${String(l.job_title || "-")}</strong></div>
 <div><span>Date of Birth</span><strong>${String(l.dob || "-")}</strong></div>
 <div><span>Location</span><strong>${String(l.location || "-")}</strong></div>
