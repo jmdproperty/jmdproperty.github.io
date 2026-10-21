@@ -3822,10 +3822,12 @@ async function saveFollowup() {
     error = result.error;
 
   } else {
+      
 if (!currentCompany?.id) {
   alert("Company information is not loaded. Please refresh and try again.");
   return;
 }
+      
     const result = await db
       .from("followups")
       .insert({
